@@ -473,7 +473,6 @@ export default function DailyAttendance() {
       setForm((prev) => ({
         ...prev,
         worker: "",
-        site: "",
         workingHours: prev.isRamzan ? "6" : "8",
         otHours: "0",
       }));
