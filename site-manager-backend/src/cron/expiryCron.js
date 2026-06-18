@@ -30,6 +30,7 @@ const startExpiryCron = () => {
 
       try {
         const workers = await Worker.find({
+          isActive: { $ne: false },
           $or: [
             { visaExpDate: { $ne: null } },
             { laborCardExpDate: { $ne: null } },
