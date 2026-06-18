@@ -157,12 +157,14 @@ const getSalaryReport = async (req, res) => {
       savedReportsMap[r.worker.toString()] = r;
     });
 
-    // 3. Fetch Previous Pending (Saved Report for PREVIOUS month)
+    // 3. Fetch Previous Pending and WPS (Saved Report for PREVIOUS month)
     const prevMonthStr = getPreviousMonth(month);
     const prevReports = await SalaryReport.find({ month: prevMonthStr }).lean();
     const prevPendingMap = {};
+    const prevWpsMap = {};
     prevReports.forEach(r => {
       prevPendingMap[r.worker.toString()] = r.pendingAmount || 0;
+      prevWpsMap[r.worker.toString()] = r.wpsAmount || 0;
     });
 
     // 4. Advances & Workers
@@ -241,6 +243,9 @@ const getSalaryReport = async (req, res) => {
         finalOther = savedReport.otherDeduction || 0;
         savedWps = savedReport.wpsAmount || 0;
         savedCash = savedReport.cashAmount || 0;
+      } else {
+        // Carry forward the previous month's WPS amount as the default
+        savedWps = prevWpsMap[wid] || 0;
       }
 
       // Calculate Total Debt and Real Pending
