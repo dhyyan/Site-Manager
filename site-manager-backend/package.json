@@ -1,0 +1,44 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [],
+  "homepage": "https://github.com/JoyelV/site-manager-backend#readme",
+  "bugs": {
+    "url": "https://github.com/JoyelV/site-manager-backend/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JoyelV/site-manager-backend.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "build": "echo 'No build step needed'",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@getbrevo/brevo": "^3.0.1",
+    "@sparticuz/chromium": "^123.0.1",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.19.2",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^7.0.10",
+    "nodemon": "^3.1.10",
+    "puppeteer": "^24.29.0"
+  },
+  "devDependencies": {
+    "@types/ejs": "^3.1.5"
+  }
+}
