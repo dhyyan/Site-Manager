@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Loader2, Undo2, Download, Calendar } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Undo2, Download, Calendar, Users } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
   useQuery,
@@ -40,6 +40,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 interface Site {
   _id: string;
@@ -109,6 +115,29 @@ const Sites = () => {
   const [reportStart, setReportStart] = useState("");
   const [reportEnd, setReportEnd] = useState("");
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+
+  // Site Stats Drawer State
+  const [selectedSiteForStats, setSelectedSiteForStats] = useState<Site | null>(null);
+  const [statsStart, setStatsStart] = useState(() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    return `${year}-${month}-01`;
+  });
+  const [statsEnd, setStatsEnd] = useState(() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  });
+
+  // Fetch site manpower stats
+  const { data: siteStatsData, isLoading: loadingSiteStats } = useQuery({
+    queryKey: ["site-stats", selectedSiteForStats?._id, statsStart, statsEnd],
+    queryFn: () => siteService.getStats(selectedSiteForStats!._id, statsStart, statsEnd),
+    enabled: !!selectedSiteForStats?._id,
+  });
 
   const generateAllocationReport = async () => {
     if (!reportStart || !reportEnd) {
@@ -799,6 +828,14 @@ const Sites = () => {
                             <Button
                               variant="outline"
                               size="icon"
+                              title="Workforce Stats"
+                              onClick={() => setSelectedSiteForStats(site)}
+                            >
+                              <Users className="w-4 h-4 text-blue-600" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
                               onClick={() => handleEdit(site)}
                             >
                               <Pencil className="w-4 h-4" />
@@ -838,6 +875,123 @@ const Sites = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Site Manpower Stats Drawer */}
+        <Sheet
+          open={!!selectedSiteForStats}
+          onOpenChange={(open) => {
+            if (!open) setSelectedSiteForStats(null);
+          }}
+        >
+          <SheetContent className="sm:max-w-2xl w-full max-h-[100vh] overflow-y-auto">
+            <SheetHeader className="mb-6">
+              <SheetTitle className="text-xl sm:text-2xl font-bold text-red-600 flex items-center gap-2">
+                <Users className="w-6 h-6 text-red-600" />
+                Workforce Stats: {selectedSiteForStats?.siteRefName}
+              </SheetTitle>
+              <div className="text-sm text-muted-foreground mt-1 space-y-1">
+                <div><span className="font-semibold text-foreground">Client:</span> {selectedSiteForStats?.clientName}</div>
+                <div><span className="font-semibold text-foreground">Location:</span> {selectedSiteForStats?.location}</div>
+              </div>
+            </SheetHeader>
+
+            <div className="space-y-6">
+              {/* Date Filters */}
+              <div className="grid grid-cols-2 gap-4 border p-4 rounded-lg bg-muted/20">
+                <div>
+                  <Label className="text-xs font-semibold">Start Date</Label>
+                  <Input
+                    type="date"
+                    value={statsStart}
+                    onChange={(e) => setStatsStart(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold">End Date</Label>
+                  <Input
+                    type="date"
+                    value={statsEnd}
+                    onChange={(e) => setStatsEnd(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              {loadingSiteStats ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <span className="text-muted-foreground">Loading workforce stats...</span>
+                </div>
+              ) : (
+                <>
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <Card className="bg-blue-50/50 border-blue-100 shadow-sm">
+                      <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                        <Users className="w-6 h-6 text-blue-600 mb-2" />
+                        <span className="text-sm text-muted-foreground font-medium">Total Manpower</span>
+                        <span className="text-2xl font-bold mt-1 text-blue-900">
+                          {siteStatsData?.summary?.totalManpower || 0}
+                        </span>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-emerald-50/50 border-emerald-100 shadow-sm">
+                      <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                        <Calendar className="w-6 h-6 text-emerald-600 mb-2" />
+                        <span className="text-sm text-muted-foreground font-medium">Total Worked Hours</span>
+                        <span className="text-2xl font-bold mt-1 text-emerald-900">
+                          {siteStatsData?.summary?.totalWorkedHours || 0} hrs
+                        </span>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Worker Breakdown Table */}
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">Worker List</h3>
+                    {!siteStatsData?.workers || siteStatsData.workers.length === 0 ? (
+                      <div className="py-12 border rounded-lg text-center text-muted-foreground bg-muted/10">
+                        No manpower records found for this period.
+                      </div>
+                    ) : (
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader className="bg-muted/30">
+                            <TableRow>
+                              <TableHead>Worker</TableHead>
+                              <TableHead className="text-center">Days Worked</TableHead>
+                              <TableHead className="text-right">Hours Worked</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {siteStatsData.workers.map((w: any) => (
+                              <TableRow key={w._id}>
+                                <TableCell className="font-medium">
+                                  {w.firstName} {w.lastName}
+                                  <span className="text-muted-foreground text-xs block">
+                                    {w.employeeNo}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-center font-semibold">
+                                  {w.daysWorked}
+                                </TableCell>
+                                <TableCell className="text-right font-semibold text-blue-600">
+                                  {w.netHours || 0} hrs
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </DashboardLayout>
   );

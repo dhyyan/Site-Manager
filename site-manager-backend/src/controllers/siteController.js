@@ -1,4 +1,6 @@
 const Site = require('../models/Site');
+const DailyAttendance = require('../models/Attendance');
+const mongoose = require('mongoose');
 
 const getSites = async (req, res) => {
   try {
@@ -90,4 +92,101 @@ const deleteSite = async (req, res) => {
   }
 };
 
-module.exports = { getSites, createSite, updateSite, deleteSite };
+const getSiteStats = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { start, end } = req.query;
+
+    if (!start || !end) {
+      return res.status(400).json({ msg: 'start & end required' });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ msg: 'Invalid site ID' });
+    }
+
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    endDate.setUTCHours(23, 59, 59, 999);
+
+    const agg = await DailyAttendance.aggregate([
+      {
+        $match: {
+          site: new mongoose.Types.ObjectId(id),
+          date: { $gte: startDate, $lte: endDate },
+          status: { $gt: 0 }
+        }
+      },
+      {
+        $group: {
+          _id: "$worker",
+          daysWorked: {
+            $sum: {
+              $cond: [
+                { $in: ["$status", [1, 2]] }, 1,
+                { $cond: [{ $eq: ["$status", 0.5] }, 0.5, 0] }
+              ]
+            }
+          },
+          totalHours: {
+            $sum: {
+              $cond: [
+                { $gt: ["$workingHours", 0] },
+                "$workingHours",
+                {
+                  $cond: [
+                    { $in: ["$status", [1, 2]] }, 8,
+                    { $cond: [{ $eq: ["$status", 0.5] }, 4, 0] }
+                  ]
+                }
+              ]
+            }
+          },
+          totalOtHours: { $sum: "$otHours" }
+        }
+      },
+      {
+        $lookup: {
+          from: "workers",
+          localField: "_id",
+          foreignField: "_id",
+          as: "workerInfo"
+        }
+      },
+      {
+        $unwind: "$workerInfo"
+      },
+      {
+        $project: {
+          _id: 1,
+          firstName: "$workerInfo.firstName",
+          lastName: "$workerInfo.lastName",
+          employeeNo: "$workerInfo.employeeNo",
+          daysWorked: 1,
+          totalHours: 1,
+          totalOtHours: 1,
+          netHours: { $add: ["$totalHours", "$totalOtHours"] }
+        }
+      },
+      {
+        $sort: { employeeNo: 1 }
+      }
+    ]);
+
+    const totalManpower = agg.length;
+    const totalWorkedHours = agg.reduce((sum, w) => sum + (w.netHours || 0), 0);
+
+    res.json({
+      summary: {
+        totalManpower,
+        totalWorkedHours
+      },
+      workers: agg
+    });
+  } catch (err) {
+    console.error('Get Site Stats Error:', err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+module.exports = { getSites, createSite, updateSite, deleteSite, getSiteStats };

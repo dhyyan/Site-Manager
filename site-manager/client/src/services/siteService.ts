@@ -53,4 +53,10 @@ export const siteService = {
     if (!res.ok) throw new Error('Failed to delete site');
     return res.json();
   },
+  getStats: async (id: string, start: string, end: string) => {
+    const params = new URLSearchParams({ start, end });
+    const res = await api(`sites/${id}/stats?${params.toString()}`);
+    if (!res.ok) throw new Error("Failed to fetch site stats");
+    return res.json();
+  },
 };
