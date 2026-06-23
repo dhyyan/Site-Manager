@@ -18,14 +18,14 @@ const formatDate = (date) =>
 
 const startExpiryCron = () => {
 
-  console.log("⏱ Cron job scheduled for 12 AM IST daily...");
+  console.log("⏱ Cron job scheduled for 12 AM UAE time daily...");
 
-  // RUN EVERYDAY AT 12 AM IST
+  // RUN EVERYDAY AT 12 AM UAE TIME
   cron.schedule(
     "00 00 * * *",
     async () => {
-      console.log("⚡ Cron Triggered at:", new Date().toLocaleString("en-IN", {
-        timeZone: "Asia/Kolkata",
+      console.log("⚡ Cron Triggered at:", new Date().toLocaleString("en-AE", {
+        timeZone: "Asia/Dubai",
       }));
 
       try {
@@ -100,7 +100,7 @@ const startExpiryCron = () => {
       }
     },
     {
-      timezone: "Asia/Kolkata",
+      timezone: "Asia/Dubai",
       scheduled: true,
     }
   );
