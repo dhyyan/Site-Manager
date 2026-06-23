@@ -6,11 +6,21 @@ const EXPIRY_THRESHOLD_DAYS = 30;
 
 const getDaysDifference = (date) => {
   if (!date) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const exp = new Date(date);
-  exp.setHours(0, 0, 0, 0);
-  return Math.floor((exp - today) / (1000 * 60 * 60 * 24));
+
+  // 1. Get the current date string explicitly in UAE timezone
+  const uaeDateString = new Date().toLocaleDateString("en-US", {
+    timeZone: "Asia/Dubai",
+  });
+  
+  // 2. Normalize both dates to midnight UAE time
+  const today = new Date(uaeDateString);
+  const exp = new Date(new Date(date).toLocaleDateString("en-US", {
+    timeZone: "Asia/Dubai",
+  }));
+
+  // 3. Calculate absolute day difference
+  const diffTime = exp.getTime() - today.getTime();
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
 };
 
 const formatDate = (date) =>
